@@ -2,19 +2,31 @@ import java.awt.event.*;
 
 public class InputManager implements KeyListener, MouseWheelListener {
     private final CameraController cameraController;
+    private boolean[] keys;
 
     public InputManager(CameraController cameraController) {
         this.cameraController = cameraController;
+        keys = new boolean[256];
+    }
+
+    public boolean isKeyPressed(int keyCode) {
+        return keys[keyCode];
     }
 
     @Override
     public void keyPressed(KeyEvent e) {
-        // Handle key events here, if needed
+        int keyCode = e.getKeyCode();
+        if (keyCode < keys.length) {
+            keys[keyCode] = true;
+        }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-        // Handle key events here, if needed
+        int keyCode = e.getKeyCode();
+        if (keyCode < keys.length) {
+            keys[keyCode] = false;
+        }
     }
 
     @Override
