@@ -12,11 +12,21 @@ public class Sprite {
     private int width;
     private int height;
     private double rotation;
+    private int rotationStepCounter;
+    private int totalRotationSteps;
+    private double targetRotation;
+    private double vx;
+    private double vy;
 
     public Sprite(String imagePath, int x, int y) {
         this.x = x;
         this.y = y;
         rotation = 0.0;
+        rotationStepCounter = 0;
+        totalRotationSteps = 0;
+        targetRotation = rotation;
+        vx = 0.0;
+        vy = 0.0;
 
         try {
             image = ImageIO.read(new FileInputStream(new File(imagePath)));
@@ -43,20 +53,74 @@ public class Sprite {
         return y;
     }
 
+    public void setX(double x) {
+        this.x = (int)x;
+    }
+
+    public void setY(double y) {
+        this.y = (int)y;
+    }
+
+    public void startRotating180Degrees(int steps) {
+        rotationStepCounter = 0;
+        totalRotationSteps = steps;
+        targetRotation = rotation + 180;
+    }
+
+    public void updateRotation() {
+        if (rotationStepCounter < totalRotationSteps) {
+            rotation += (targetRotation - rotation) / (totalRotationSteps - rotationStepCounter);
+            rotationStepCounter++;
+            if (rotationStepCounter==totalRotationSteps) {
+                rotation = targetRotation;  // guarantee we finish at the required rotation, rather than slightly off
+            }
+        }
+    }
+
     public void rotate(double angle) {
         rotation += angle;
     }
 
+    public double getRotation() {
+        return rotation;
+    }
+
+    public double getVx() {
+        return vx;
+    }
+
+    public void setVx(double vx) {
+        this.vx = vx;
+    }
+
+    public double getVy() {
+        return vy;
+    }
+
+    public void setVy(double vy) {
+        this.vy = vy;
+    }
+
+    public void move() {
+        x += vx;
+        y += vy;
+    }
+
     public void draw(Graphics g, Camera camera) {
-        int drawX = (int) ((x - camera.getX()) * camera.getZoom()) + g.getClipBounds().width / 2;
-        int drawY = (int) ((y - camera.getY()) * camera.getZoom()) + g.getClipBounds().height / 2;
-
-        int drawWidth = (int) (width * camera.getZoom());
-        int drawHeight = (int) (height * camera.getZoom());
-
         Graphics2D g2d = (Graphics2D) g.create();
-        g2d.rotate(Math.toRadians(rotation), drawX, drawY);
-        g2d.drawImage(image, drawX - drawWidth / 2, drawY - drawHeight / 2, drawWidth, drawHeight, null);
+
+        int drawX = (int) Math.round(x - camera.getX());
+        int drawY = (int) Math.round(y - camera.getY());
+
+        g2d.translate(drawX + getWidth() / 2, drawY + getHeight() / 2);
+        g2d.rotate(Math.toRadians(getRotation()));
+        g2d.drawImage(image, -image.getWidth() / 2, -image.getHeight() / 2, null);
+
         g2d.dispose();
     }
+
+
+
+
+
 }

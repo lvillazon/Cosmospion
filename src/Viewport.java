@@ -8,8 +8,12 @@ public class Viewport {
     }
 
     public void apply(Graphics2D g) {
-        g.translate(-camera.getX() + g.getClipBounds().width / 2, -camera.getY() + g.getClipBounds().height / 2);
+        int centerX = g.getClipBounds().width / 2;
+        int centerY = g.getClipBounds().height / 2;
+
+        g.translate(centerX, centerY);
         g.scale(camera.getZoom(), camera.getZoom());
+        g.translate(-centerX, -centerY);
     }
 
     public void unapply(Graphics2D g) {

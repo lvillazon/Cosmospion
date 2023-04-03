@@ -17,12 +17,20 @@ public class Camera {
         this.x = x;
     }
 
+    public void setX(double x) {
+        this.x = (int)x;
+    }
+
     public int getY() {
         return y;
     }
 
     public void setY(int y) {
         this.y = y;
+    }
+
+    public void setY(double y) {
+        this.y = (int)y;
     }
 
     public double getZoom() {
