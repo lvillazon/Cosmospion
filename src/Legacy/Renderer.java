@@ -1,3 +1,5 @@
+package Legacy;
+
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 
 import javax.swing.*;
@@ -33,11 +35,12 @@ public class Renderer extends JPanel {
 
         viewport.apply(g2d);
         world.draw(g, camera); // Draw the world
-        drawPredictedTrajectory(g2d, sprite, world);
+        //drawPredictedTrajectory(g2d, sprite, world);
         sprite.draw(g2d, camera); // Draw the sprite
         viewport.unapply(g2d);
     }
 
+    /*
     private void drawPredictedTrajectory(Graphics2D g, PhysicalObject object, World world) {
         Vector2D currentPosition = object.getPosition();
         Vector2D currentVelocity = object.getVelocity();
@@ -68,6 +71,8 @@ public class Renderer extends JPanel {
             currentVelocity = newVelocity;
         }
     }
+
+     */
 
 
 

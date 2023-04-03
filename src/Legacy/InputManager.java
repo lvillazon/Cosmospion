@@ -1,3 +1,5 @@
+package Legacy;
+
 import java.awt.event.*;
 
 public class InputManager implements KeyListener, MouseWheelListener {

@@ -1,3 +1,5 @@
+package Legacy;
+
 import java.awt.*;
 
 public class Viewport {

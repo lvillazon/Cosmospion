@@ -1,3 +1,5 @@
+package Legacy;
+
 public class CameraController {
     private Camera camera;
 

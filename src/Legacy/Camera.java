@@ -1,3 +1,5 @@
+package Legacy;
+
 public class Camera {
     private int x;
     private int y;
