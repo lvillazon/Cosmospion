@@ -5,7 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 
-public class Sprite {
+public class Sprite implements Renderable {
     private BufferedImage image;
     private int x;
     private int y;
@@ -106,17 +106,13 @@ public class Sprite {
         y += vy;
     }
 
-    public void draw(Graphics g, Camera camera) {
-        Graphics2D g2d = (Graphics2D) g.create();
-
+    public void draw(Graphics2D g, Camera camera) {
         int drawX = (int) Math.round(x - camera.getX());
         int drawY = (int) Math.round(y - camera.getY());
 
-        g2d.translate(drawX + getWidth() / 2, drawY + getHeight() / 2);
-        g2d.rotate(Math.toRadians(getRotation()));
-        g2d.drawImage(image, -image.getWidth() / 2, -image.getHeight() / 2, null);
-
-        g2d.dispose();
+        g.translate(drawX + getWidth() / 2, drawY + getHeight() / 2);
+        g.rotate(Math.toRadians(getRotation()));
+        g.drawImage(image, -image.getWidth() / 2, -image.getHeight() / 2, null);
     }
 
 

@@ -30,6 +30,13 @@ public class World {
         return atmosphericDensity;
     }
 
+    public boolean isCollidingWith(PhysicalObject obj) {
+        double distance = Math.sqrt(Math.pow(getCenterX() - obj.getPosition().getX(), 2) + Math.pow(getCenterY() - obj.getPosition().getY(), 2));
+        double minDistance = getRadius() + obj.getWidth() / 2;
+
+        return distance < minDistance;
+    }
+
     public void draw(Graphics g, Camera camera) {
         Graphics2D g2d = (Graphics2D) g.create();
 

@@ -1,0 +1,553 @@
+public class Camera {
+    private int x;
+    private int y;
+    private double zoom;
+
+    public Camera(int x, int y, double zoom) {
+        this.x = x;
+        this.y = y;
+        this.zoom = zoom;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public void setX(int x) {
+        this.x = x;
+    }
+
+    public void setX(double x) {
+        this.x = (int)x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public void setY(int y) {
+        this.y = y;
+    }
+
+    public void setY(double y) {
+        this.y = (int)y;
+    }
+
+    public double getZoom() {
+        return zoom;
+    }
+
+    public void setZoom(double zoom) {
+        this.zoom = zoom;
+    }
+}
+ 
+public class CameraController {
+    private Camera camera;
+
+    public CameraController(Camera camera) {
+        this.camera = camera;
+    }
+
+    public void move(int dx, int dy) {
+        camera.setX(camera.getX() + dx);
+        camera.setY(camera.getY() + dy);
+    }
+
+    public void zoom(double zoomFactor) {
+        camera.setZoom(camera.getZoom() * zoomFactor);
+    }
+}
+ 
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+
+public class GameEngine extends JFrame implements ActionListener {
+    private Renderer renderer;
+    private Camera camera;
+    private PhysicalObject ship;
+    private World world;
+    private InputManager inputManager;
+    private int targetRotation;
+    private boolean currentlyRotating;
+    private static final double ROTATION_SPEED = 5.0;
+    private static final double ACCELERATION = 0.1;
+
+    public GameEngine() {
+        setTitle("Cosmospion");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        camera = new Camera(0, 0, 0.5);
+        ship = new PhysicalObject("assets\\art\\sprites\\ship3.png", 0, 0, 1);
+        targetRotation = (int)ship.getRotation();
+        currentlyRotating = false;
+        world = new World(1000, 1.0, 0, 0);
+        positionSpriteOnWorld();
+        renderer = new Renderer(camera, ship, world);
+        CameraController cameraController = new CameraController(camera);
+        inputManager = new InputManager(cameraController);
+        renderer.addKeyListener(inputManager);
+        renderer.addMouseWheelListener(inputManager);
+        add(renderer);
+
+        pack();
+        setLocationRelativeTo(null);
+        setResizable(false);
+        setVisible(true);
+
+        Timer timer = new Timer(1000 / 60, this);
+        timer.start();
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        if (inputManager.isKeyPressed(KeyEvent.VK_A)) {
+            ship.rotate(-ROTATION_SPEED);
+        }
+        if (inputManager.isKeyPressed(KeyEvent.VK_D)) {
+            ship.rotate(ROTATION_SPEED);
+        }
+        if (inputManager.isKeyPressed(KeyEvent.VK_W)) {
+            ship.setVx(ship.getVx() + ACCELERATION * Math.sin(Math.toRadians(ship.getRotation())));
+            ship.setVy(ship.getVy() - ACCELERATION * Math.cos(Math.toRadians(ship.getRotation())));
+        }
+        if (inputManager.isKeyPressed(KeyEvent.VK_S)) {
+            targetRotation += 180;
+            targetRotation %= 360;
+            ship.startRotating180Degrees(60);
+        }
+
+        ship.updateRotation();
+        ship.updatePhysics(1);
+        //ship.move();
+        renderer.repaint();
+    }
+
+    private void positionSpriteOnWorld() {
+        double angle = Math.toRadians(270); // Set angle according to desired position (90 degrees for top)
+        double x = world.getRadius() * Math.cos(angle) + world.getCenterX() - ship.getWidth() / 2;
+        double y = world.getRadius() * Math.sin(angle) + world.getCenterY() - ship.getHeight();
+
+        ship.setX(x);
+        ship.setY(y);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(GameEngine::new);
+    }
+}
+ 
+import java.awt.event.*;
+
+public class InputManager implements KeyListener, MouseWheelListener {
+    private final CameraController cameraController;
+    private boolean[] keys;
+
+    public InputManager(CameraController cameraController) {
+        this.cameraController = cameraController;
+        keys = new boolean[256];
+    }
+
+    public boolean isKeyPressed(int keyCode) {
+        return keys[keyCode];
+    }
+
+    @Override
+    public void keyPressed(KeyEvent e) {
+        int keyCode = e.getKeyCode();
+        if (keyCode < keys.length) {
+            keys[keyCode] = true;
+        }
+    }
+
+    @Override
+    public void keyReleased(KeyEvent e) {
+        int keyCode = e.getKeyCode();
+        if (keyCode < keys.length) {
+            keys[keyCode] = false;
+        }
+    }
+
+    @Override
+    public void keyTyped(KeyEvent e) {
+        // Handle key events here, if needed
+    }
+
+    @Override
+    public void mouseWheelMoved(MouseWheelEvent e) {
+        double zoomFactor = e.getWheelRotation() < 0 ? 1.1 : 0.9;
+        cameraController.zoom(zoomFactor);
+    }
+}
+ 
+import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
+
+public interface Physical {
+    Vector2D getPosition();
+    int getMass();
+    void setPosition(double x, double y);
+    void applyForce(Vector2D force, double deltaTime);
+    void updatePhysics(double deltaTime);
+}
+ 
+import java.awt.*;
+import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
+
+
+public class PhysicalObject extends Sprite implements Physical {
+    private Vector2D position;
+    private Vector2D velocity;
+    private int mass;
+
+    public PhysicalObject(String imagePath, int x, int y, int mass) {
+        super(imagePath, x, y);
+        this.mass = mass;
+        this.position = new Vector2D(x, y);
+        this.velocity = new Vector2D(0, 0);
+    }
+
+    @Override
+    public int getMass() {
+        return mass;
+    }
+
+    @Override
+    public Vector2D getPosition() {
+        return position;
+    }
+
+    @Override
+    public void setPosition(double x, double y) {
+        this.position = new Vector2D(x, y);
+    }
+
+    @Override
+    public void applyForce(Vector2D force, double deltaTime) {
+        Vector2D acceleration = force.scalarMultiply(1.0 / mass);
+        Vector2D deltaVelocity = acceleration.scalarMultiply(deltaTime);
+        Vector2D newVelocity = velocity.add(deltaVelocity);
+        velocity = newVelocity;
+
+        Vector2D deltaPosition = newVelocity.scalarMultiply(deltaTime);
+        Vector2D newPosition = position.add(deltaPosition);
+        position = newPosition;
+    }
+
+    @Override
+    public void updatePhysics(double deltaTime) {
+        PhysicsEngine.updateForces(this, new Vector2D(100.0,0.0), deltaTime);
+        setPosition(position.getX() + velocity.getX() * deltaTime, position.getY() + velocity.getY() * deltaTime);
+    }
+
+    @Override
+    public void draw(Graphics2D g, Camera camera) {
+        super.draw(g, camera);
+    }
+}
+ 
+import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
+
+public class PhysicsEngine {
+    private static final double GRAVITATIONAL_CONSTANT = 9.81;
+
+    public static void updateForces(PhysicalObject physicalObject, Vector2D centerOfWorld, double deltaTime) {
+        applyGravity(physicalObject, centerOfWorld, deltaTime);
+    }
+
+    private static void applyGravity(PhysicalObject physicalObject, Vector2D centerOfWorld, double deltaTime) {
+        Vector2D currentPosition = physicalObject.getPosition();
+        Vector2D directionToCenter = centerOfWorld.subtract(currentPosition).normalize();
+        Vector2D gravityForce = directionToCenter.scalarMultiply(GRAVITATIONAL_CONSTANT);
+        physicalObject.applyForce(gravityForce, deltaTime);
+    }
+
+    public static Vector2D calculateGravitationalForce(PhysicalObject p, double worldCenterX, double worldCenterY) {
+        double dx = worldCenterX - p.getX();
+        double dy = worldCenterY - p.getY();
+
+        double distanceSquared = dx * dx + dy * dy;
+        double forceMagnitude = GRAVITATIONAL_CONSTANT * p.getMass() / distanceSquared;
+
+        double normalizedDx = dx / Math.sqrt(distanceSquared);
+        double normalizedDy = dy / Math.sqrt(distanceSquared);
+
+        double fx = forceMagnitude * normalizedDx;
+        double fy = forceMagnitude * normalizedDy;
+
+        return new Vector2D(fx, fy);
+    }
+
+    public static void update(PhysicalObject p, double worldCenterX, double worldCenterY) {
+        Vector2D gravitationalForce = calculateGravitationalForce(p, worldCenterX, worldCenterY);
+        p.setVx(p.getVx() + gravitationalForce.getX());
+        p.setVy(p.getVy() + gravitationalForce.getY());
+
+        p.setX(p.getX() + p.getVx());
+        p.setY(p.getY() + p.getVy());
+    }
+}
+ 
+public class PIDController {
+    private double kp;
+    private double ki;
+    private double kd;
+    private double integral;
+    private double previousError;
+
+    public PIDController(double kp, double ki, double kd) {
+        this.kp = kp;
+        this.ki = ki;
+        this.kd = kd;
+        this.integral = 0;
+        this.previousError = 0;
+    }
+
+    public double update(double error, double dt) {
+        integral += error * dt;
+        double derivative = (error - previousError) / dt;
+        previousError = error;
+        return kp * error + ki * integral + kd * derivative;
+    }
+}
+ 
+import java.awt.*;
+
+public interface Renderable {
+    void draw(Graphics2D g, Camera camera);
+}
+ 
+import javax.swing.*;
+import java.awt.*;
+
+public class Renderer extends JPanel {
+    private Sprite sprite;
+    private World world;
+    private Camera camera;
+    private Viewport viewport;
+
+    public Renderer(Camera camera, Sprite sprite, World world) {
+        this.camera = camera;
+        this.sprite = sprite;
+        this.world = world;
+        this.viewport = new Viewport(camera);
+        setPreferredSize(new Dimension(1000, 800));
+        setFocusable(true);
+        requestFocusInWindow();
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        Graphics2D g2d = (Graphics2D) g;
+
+        // Update the camera's position to center on the sprite
+        camera.setX(sprite.getX() - getWidth() / 2.0 + sprite.getWidth() / 2.0);
+        camera.setY(sprite.getY() - getHeight() / 2.0 + sprite.getHeight() / 2.0);
+
+        viewport.apply(g2d);
+        world.draw(g, camera); // Draw the world
+        sprite.draw(g2d, camera); // Draw the sprite
+        viewport.unapply(g2d);
+    }
+
+
+
+
+}
+ 
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import javax.imageio.ImageIO;
+
+public class Sprite implements Renderable {
+    private BufferedImage image;
+    private int x;
+    private int y;
+    private int width;
+    private int height;
+    private double rotation;
+    private int rotationStepCounter;
+    private int totalRotationSteps;
+    private double targetRotation;
+    private double vx;
+    private double vy;
+
+    public Sprite(String imagePath, int x, int y) {
+        this.x = x;
+        this.y = y;
+        rotation = 0.0;
+        rotationStepCounter = 0;
+        totalRotationSteps = 0;
+        targetRotation = rotation;
+        vx = 0.0;
+        vy = 0.0;
+
+        try {
+            image = ImageIO.read(new FileInputStream(new File(imagePath)));
+            width = image.getWidth();
+            height = image.getHeight();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public int getX() {
+        return x;
+    }
+
+    public int getY() {
+        return y;
+    }
+
+    public void setX(double x) {
+        this.x = (int)x;
+    }
+
+    public void setY(double y) {
+        this.y = (int)y;
+    }
+
+    public void startRotating180Degrees(int steps) {
+        rotationStepCounter = 0;
+        totalRotationSteps = steps;
+        targetRotation = rotation + 180;
+    }
+
+    public void updateRotation() {
+        if (rotationStepCounter < totalRotationSteps) {
+            rotation += (targetRotation - rotation) / (totalRotationSteps - rotationStepCounter);
+            rotationStepCounter++;
+            if (rotationStepCounter==totalRotationSteps) {
+                rotation = targetRotation;  // guarantee we finish at the required rotation, rather than slightly off
+            }
+        }
+    }
+
+    public void rotate(double angle) {
+        rotation += angle;
+    }
+
+    public double getRotation() {
+        return rotation;
+    }
+
+    public double getVx() {
+        return vx;
+    }
+
+    public void setVx(double vx) {
+        this.vx = vx;
+    }
+
+    public double getVy() {
+        return vy;
+    }
+
+    public void setVy(double vy) {
+        this.vy = vy;
+    }
+
+    public void move() {
+        x += vx;
+        y += vy;
+    }
+
+    public void draw(Graphics2D g, Camera camera) {
+        int drawX = (int) Math.round(x - camera.getX());
+        int drawY = (int) Math.round(y - camera.getY());
+
+        g.translate(drawX + getWidth() / 2, drawY + getHeight() / 2);
+        g.rotate(Math.toRadians(getRotation()));
+        g.drawImage(image, -image.getWidth() / 2, -image.getHeight() / 2, null);
+    }
+
+
+
+
+
+}
+ 
+import java.awt.*;
+
+public class Viewport {
+    private Camera camera;
+
+    public Viewport(Camera camera) {
+        this.camera = camera;
+    }
+
+    public void apply(Graphics2D g) {
+        int centerX = g.getClipBounds().width / 2;
+        int centerY = g.getClipBounds().height / 2;
+
+        g.translate(centerX, centerY);
+        g.scale(camera.getZoom(), camera.getZoom());
+        g.translate(-centerX, -centerY);
+    }
+
+    public void unapply(Graphics2D g) {
+        g.scale(1 / camera.getZoom(), 1 / camera.getZoom());
+        g.translate(camera.getX() - g.getClipBounds().width / 2, camera.getY() - g.getClipBounds().height / 2);
+    }
+}
+ 
+import java.awt.*;
+
+public class World {
+    private int radius;
+    private double atmosphericDensity;
+    private double centerX;
+    private double centerY;
+
+    public World(int radius, double atmosphericDensity, double centerX, double centerY) {
+        this.radius = radius;
+        this.atmosphericDensity = atmosphericDensity;
+        this.centerX = centerX;
+        this.centerY = centerY;
+    }
+
+    // Getter methods for centerX and centerY
+    public double getCenterX() {
+        return centerX;
+    }
+
+    public double getCenterY() {
+        return centerY;
+    }
+
+    public int getRadius() {
+        return radius;
+    }
+
+    public double getAtmosphericDensity() {
+        return atmosphericDensity;
+    }
+
+    public void draw(Graphics g, Camera camera) {
+        Graphics2D g2d = (Graphics2D) g.create();
+
+        int drawX = (int) Math.round(centerX - camera.getX());
+        int drawY = (int) Math.round(centerY - camera.getY());
+
+        g2d.setColor(Color.BLUE);
+        g2d.fillOval(drawX - radius, drawY - radius, 2 * radius, 2 * radius);
+
+        g2d.dispose();
+    }
+
+
+}
+ 
