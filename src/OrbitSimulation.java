@@ -5,15 +5,22 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.util.LinkedList;
 
 public class OrbitSimulation extends JPanel implements ActionListener {
     private final Orbit orbit;
     private Timer timer;
     private boolean singleStepMode;
+    private double timeDelta;
+    private int predictionSteps = 2000;  // how many time steps to look ahead for orbits.
+    // Add a padding constant to ensure both bodies are visible on the screen
+    private static final double PADDING_FACTOR = 1.1;
 
     public OrbitSimulation(Orbit orbit, boolean singleStepMode) {
         this.orbit = orbit;
+        timeDelta = 1.0;  // default time step of 1s per frame
         this.timer = new Timer(1000 / 60, this); // 60 frames per second
         this.singleStepMode = singleStepMode;
 
@@ -21,18 +28,26 @@ public class OrbitSimulation extends JPanel implements ActionListener {
             this.timer.start();
         }
 
-        // Add a KeyListener to handle spacebar and escape key events
+        // Add a KeyListener to handle simulation key events:
+        //  ESC - toggle single step mode
+        // Space - next step
+        // [ and ] slow and speed simulation
         setFocusable(true);
         requestFocusInWindow();
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                int keyCode = e.getKeyCode();
+                if (keyCode == KeyEvent.VK_SPACE) {
                     if (isSingleStepMode()) {
                         advanceFrame();
                     }
-                } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                } else if (keyCode == KeyEvent.VK_ESCAPE) {
                     toggleMode();
+                } else if (keyCode == KeyEvent.VK_OPEN_BRACKET) {
+                    decreaseSpeed();
+                } else if (keyCode == KeyEvent.VK_CLOSE_BRACKET) {
+                    increaseSpeed();
                 }
             }
         });
@@ -60,50 +75,61 @@ public class OrbitSimulation extends JPanel implements ActionListener {
     // render the orbiting objects
     @Override
     protected void paintComponent(Graphics graphics) {
+
         super.paintComponent(graphics);
 
         // Get the bounding box of the orbit and calculate the scaling factor (so that they all fit on screen)
         Rectangle2D.Double boundingBox = orbit.getBoundingBox();
-        double scaleX = getWidth() / boundingBox.getWidth();
-        double scaleY = getHeight() / boundingBox.getHeight();
-        double scale = Math.min(scaleX, scaleY);
+        double scaleX = getWidth() / (boundingBox.getWidth() * 1.2);
+        double scaleY = getHeight() / (boundingBox.getHeight() * 1.2);
+        // Adjust the scale calculation to include the padding factor
+        double scale = Math.min(scaleX, scaleY) * PADDING_FACTOR*.5;
 
         // Set up the graphics context to scale and translate the drawing
         Graphics2D g2d = (Graphics2D) graphics;
         AffineTransform oldTransform = g2d.getTransform();
         g2d.scale(scale, scale);
-        g2d.translate(-boundingBox.getX() + (getWidth() / scale - boundingBox.getWidth()) / 2,
-                -boundingBox.getY() + (getHeight() / scale - boundingBox.getHeight()) / 2);
+        // Calculate the translation required to center the central point mass
+        double translateX = (getWidth() / (2 * scale)) - orbit.getCentralPointMass().getX();
+        double translateY = (getHeight() / (2 * scale)) - orbit.getCentralPointMass().getY();
+        g2d.translate(translateX, translateY);
 
         // Draw the central point mass
-        RenderablePointMass centralPointMass = new RenderablePointMass(
-                orbit.getCentralPointMass().getX(),
-                orbit.getCentralPointMass().getY(),
-                orbit.getCentralPointMass().getMass(),
-                orbit.getCentralPointMass().getVelocityX(),
-                orbit.getCentralPointMass().getVelocityY(),
-                10);
-        centralPointMass.draw(graphics);
+        orbit.getCentralPointMass().draw(graphics);
 
         // Draw the orbiting point masses
-        for (PointMass orbitingPointMass : orbit.getOrbitingPointMasses()) {
-            RenderablePointMass renderableOrbitingPointMass = new RenderablePointMass(
-                    orbitingPointMass.getX(),
-                    orbitingPointMass.getY(),
-                    orbitingPointMass.getMass(),
-                    orbitingPointMass.getVelocityX(),
-                    orbitingPointMass.getVelocityY(),
-                    5);
-            renderableOrbitingPointMass.draw(graphics);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        for (RenderablePointMass orbitingPointMass : orbit.getOrbitingPointMasses()) {
+            // Draw the predicted path
+            java.util.List<Point2D.Double> predictedPositions = orbit.predictOrbit(orbitingPointMass, timeDelta, predictionSteps); // Predict the path for the next 10 seconds (600 steps)
+            g2d.setColor(Color.GREEN);
+            Point2D.Double previousPoint = new Point2D.Double(orbitingPointMass.getX(), orbitingPointMass.getY());
+            for (Point2D.Double point : predictedPositions) {
+                g2d.drawLine((int)previousPoint.x, (int)previousPoint.y, (int)point.x, (int)point.y);
+                previousPoint = point;
+            }
+            //draw the point mass itself
+            orbitingPointMass.draw(graphics);
         }
 
         // Restore the original graphics context
         g2d.setTransform(oldTransform);
     }
 
+    public void increaseSpeed() {
+        timeDelta *=2;
+        System.out.println("time step = "+timeDelta);
+    }
+
+    public void decreaseSpeed() {
+        timeDelta /=2;
+        System.out.println("time step = "+timeDelta);
+    }
+
     @Override
     public void actionPerformed(ActionEvent e) {
-        orbit.update(1.0 / 60); // Update the orbit with a time step of 1/60 seconds
+        orbit.update(timeDelta); // Update the orbit with the current time step
         repaint(); // Request a repaint to update the display
     }
 }
+
