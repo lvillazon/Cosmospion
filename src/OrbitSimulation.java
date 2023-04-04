@@ -2,17 +2,59 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Rectangle2D;
 
 public class OrbitSimulation extends JPanel implements ActionListener {
     private final Orbit orbit;
     private Timer timer;
+    private boolean singleStepMode;
 
-    public OrbitSimulation(Orbit orbit) {
+    public OrbitSimulation(Orbit orbit, boolean singleStepMode) {
         this.orbit = orbit;
         this.timer = new Timer(1000 / 60, this); // 60 frames per second
-        this.timer.start();
+        this.singleStepMode = singleStepMode;
+
+        if (!singleStepMode) {
+            this.timer.start();
+        }
+
+        // Add a KeyListener to handle spacebar and escape key events
+        setFocusable(true);
+        requestFocusInWindow();
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_SPACE) {
+                    if (isSingleStepMode()) {
+                        advanceFrame();
+                    }
+                } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                    toggleMode();
+                }
+            }
+        });
+    }
+
+    private void advanceFrame() {
+        orbit.update(1.0 / 60);
+        repaint();
+    }
+
+    private boolean isSingleStepMode() {
+        return singleStepMode;
+    }
+
+    private void toggleMode() {
+        if (isSingleStepMode()) {
+            timer.start();
+            singleStepMode = false;
+        } else {
+            timer.stop();
+            singleStepMode = true;
+        }
     }
 
     // render the orbiting objects
