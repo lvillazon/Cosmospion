@@ -13,6 +13,13 @@ public class RenderablePointMass extends PointMass implements Renderable {
         this.maxTrailLength = 500; // Adjust this value to change the trail length
     }
 
+    public RenderablePointMass(RenderablePointMass other) {
+        super(other.getX(), other.getY(), other.getMass(), other.getVelocityX(), other.getVelocityY());
+        this.pointSize = other.pointSize;
+        this.previousPositions = new LinkedList<>();
+        this.maxTrailLength = 500; // Adjust this value to change the trail length
+    }
+
     @Override
     public int getScreenX() {
         // Convert the x-coordinate of the position to screen coordinates.

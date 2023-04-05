@@ -22,9 +22,11 @@ public class Main {
             int screenHeight = 600;
 
             RenderablePointMass centralPointMass = new RenderablePointMass(0, 0, centralPointMassMass, 0, 0, 50);
-            RenderablePointMass orbitingPointMass = new RenderablePointMass(earthMoonDistance, 0, orbitingPointMassMass, 0, moonOrbitalVelocity, 50);
+            RenderablePointMass moon1 = new RenderablePointMass(earthMoonDistance, 0, orbitingPointMassMass, 0, -moonOrbitalVelocity, 50);
+            RenderablePointMass moon2 = new RenderablePointMass(-earthMoonDistance*3, 0, orbitingPointMassMass/1000000000, 0, -0.5, 50);
             Orbit orbit = new Orbit(centralPointMass);
-            orbit.addOrbitingPointMass(orbitingPointMass);
+            orbit.addOrbitingPointMass(moon1);
+            //orbit.addOrbitingPointMass(moon2);
 
             // Create an OrbitSimulation instance to render and update the orbit
             OrbitSimulation orbitSimulation = new OrbitSimulation(orbit, false); // Start in single-step mode
