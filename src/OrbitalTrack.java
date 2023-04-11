@@ -12,8 +12,18 @@ public class OrbitalTrack {
         this.color = color;
     }
 
+    // deep copy constructor
+    public OrbitalTrack(OrbitalTrack other) {
+        this.color = other.color;
+        this.points = new ArrayList<>(other.points);
+    }
+
     public void addPoint(Point2D.Double point) {
         points.add(point);
+    }
+
+    public void clearPoints() {
+        this.points.clear();
     }
 
     public void draw(Graphics g) {

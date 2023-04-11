@@ -14,7 +14,7 @@ public class OrbitSimulation extends JPanel implements ActionListener {
     private Timer timer;
     private boolean singleStepMode;
     private double timeDelta;
-    private int predictionSteps = 2000;  // how many time steps to look ahead for orbits.
+    private int predictionSteps = 200;  // how many time steps to look ahead for orbits.
     // Add a padding constant to ensure both bodies are visible on the screen
     private static final double PADDING_FACTOR = 1.1;
 
@@ -106,6 +106,8 @@ public class OrbitSimulation extends JPanel implements ActionListener {
             // Draw the predicted path
             java.util.List<Point2D.Double> predictedPositions = orbit.predictOrbit(orbitingPointMass, timeDelta, predictionSteps); // Predict the path for the next 10 seconds (600 steps)
             g2d.setColor(Color.GREEN);
+            // Set the stroke width for the orbit lines
+            g2d.setStroke(new BasicStroke(30));
             Point2D.Double previousPoint = new Point2D.Double(orbitingPointMass.getX(), orbitingPointMass.getY());
             for (Point2D.Double point : predictedPositions) {
                 g2d.drawLine((int)previousPoint.x, (int)previousPoint.y, (int)point.x, (int)point.y);
@@ -141,7 +143,7 @@ public class OrbitSimulation extends JPanel implements ActionListener {
         double maxX = minX;
         double maxY = minY;
 
-        for (PointMass orbitingPointMass : orbit.getOrbitingPointMasses()) {
+        for (RenderablePointMass orbitingPointMass : orbit.getOrbitingPointMasses()) {
             List<Point2D.Double> predictedPositions = orbit.predictOrbit(orbitingPointMass, timeDelta, predictionSteps);
             //System.out.println("Predicted positions size: " + predictedPositions.size());
             for (Point2D.Double position : predictedPositions) {

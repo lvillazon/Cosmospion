@@ -5,12 +5,14 @@ public class RenderablePointMass extends PointMass implements Renderable {
     private final int pointSize;
     private final LinkedList<Point> previousPositions;
     private final int maxTrailLength;
+    private Color color;
 
-    public RenderablePointMass(double x, double y, double mass, double velocityX, double velocityY, int pointSize) {
+    public RenderablePointMass(double x, double y, double mass, double velocityX, double velocityY, int pointSize, Color c) {
         super(x, y, mass, velocityX, velocityY);
         this.pointSize = pointSize;
         this.previousPositions = new LinkedList<>();
         this.maxTrailLength = 500; // Adjust this value to change the trail length
+        this.color = c;
     }
 
     public RenderablePointMass(RenderablePointMass other) {
@@ -18,7 +20,9 @@ public class RenderablePointMass extends PointMass implements Renderable {
         this.pointSize = other.pointSize;
         this.previousPositions = new LinkedList<>();
         this.maxTrailLength = 500; // Adjust this value to change the trail length
+        this.color = other.color;
     }
+
 
     @Override
     public int getScreenX() {
@@ -48,7 +52,7 @@ public class RenderablePointMass extends PointMass implements Renderable {
         }
 
         // draw the point mass
-        graphics.setColor(Color.RED);
+        graphics.setColor(color);
         int screenX = getScreenX();
         int screenY = getScreenY();
         int adjustedPointSize = Math.max(pointSize, 3); // Ensure a minimum size of 3

@@ -31,6 +31,22 @@ public class Orbit {
         }
     }
 
+    // deep copy constructor
+    public Orbit(Orbit other) {
+        this.centralPointMass = new RenderablePointMass(other.centralPointMass);
+        this.orbitingPointMasses = new ArrayList<>();
+
+        for (RenderablePointMass rpm : other.orbitingPointMasses) {
+            this.orbitingPointMasses.add(new RenderablePointMass(rpm));
+        }
+
+        this.orbitalTracks = new ArrayList<>();
+        for (OrbitalTrack track : other.orbitalTracks) {
+            this.orbitalTracks.add(new OrbitalTrack(track));
+        }
+    }
+
+
     /**
      * Adds an orbiting point mass to the orbit.
      *
@@ -38,6 +54,7 @@ public class Orbit {
      */
     public void addOrbitingPointMass(RenderablePointMass orbitingPointMass) {
         orbitingPointMasses.add(orbitingPointMass);
+        this.orbitalTracks.add(new OrbitalTrack(Color.GREEN));
     }
 
     /**
@@ -58,11 +75,6 @@ public class Orbit {
         return Collections.unmodifiableList(orbitingPointMasses);
     }
 
-    // calculate the rectangle needed to enclose all objects in the orbit
-    //public Rectangle2D.Double getBoundingBox() {
-    //    return boundingBox;
-    //}
-
     /**
      * Updates the positions and velocities of all orbiting point masses relative to the central point mass
      * according to the rules of Newtonian mechanics.
@@ -70,7 +82,7 @@ public class Orbit {
      * @param deltaTime The time interval in seconds for which the positions and velocities should be updated.
      */
 
-    public void update(double deltaTime) {
+    public void updateWithoutOrbitalTracks(double deltaTime) {
         for (int i = 0; i < orbitingPointMasses.size(); i++) {
             PointMass pointMass1 = orbitingPointMasses.get(i);
 
@@ -83,25 +95,48 @@ public class Orbit {
                 updateInteraction(pointMass1, pointMass2, deltaTime);
             }
         }
-        updateOrbitalTracks(deltaTime);
     }
 
-    private void updateOrbitalTracks(double deltaTime) {
-        int numSteps = 2000;
-        double timeMultiplier = 1.0;
+    public void update(double deltaTime) {
+        updateWithoutOrbitalTracks(deltaTime);
+        updateOrbitalTracks(deltaTime, NUM_PREDICTION_POINTS);
+    }
 
+    private void updateSingleStep(double deltaTime) {
         for (int i = 0; i < orbitingPointMasses.size(); i++) {
-            RenderablePointMass originalOrbitingPointMass = orbitingPointMasses.get(i);
-            RenderablePointMass orbitingPointMassCopy = new RenderablePointMass(originalOrbitingPointMass);
-            RenderablePointMass centralPointMassCopy = new RenderablePointMass(centralPointMass);
+            PointMass pointMass1 = orbitingPointMasses.get(i);
 
+            // Interaction between orbiting point masses and the central point mass
+            updateInteraction(pointMass1, centralPointMass, deltaTime);
+
+            // Interaction between orbiting point masses themselves
+            for (int j = i + 1; j < orbitingPointMasses.size(); j++) {
+                PointMass pointMass2 = orbitingPointMasses.get(j);
+                updateInteraction(pointMass1, pointMass2, deltaTime);
+            }
+        }
+    }
+
+
+    public void updateOrbitalTracks(double timeDelta, int predictionSteps) {
+        for (int i = 0; i < orbitingPointMasses.size(); i++) {
+            RenderablePointMass orbitingPointMass = orbitingPointMasses.get(i);
             OrbitalTrack track = orbitalTracks.get(i);
-            track.getPoints().clear();
 
-            for (int step = 0; step < numSteps; step++) {
-                updateInteraction(orbitingPointMassCopy, centralPointMassCopy, deltaTime * timeMultiplier);
-                track.addPoint(new Point2D.Double(orbitingPointMassCopy.getX(), orbitingPointMassCopy.getY()));
-                timeMultiplier += 1.0;
+            // Reset the OrbitalTrack points
+            track.clearPoints();
+
+            // Create a deep copy of the current Orbit object
+            Orbit tempOrbit = new Orbit(this);
+
+            // Calculate the predicted positions for the current orbiting point mass
+            for (int step = 1; step <= predictionSteps; step++) {
+                tempOrbit.updateSingleStep(timeDelta); // Update with a fixed timeDelta for each step
+                Point2D.Double predictedPosition = new Point2D.Double(
+                        tempOrbit.getOrbitingPointMasses().get(i).getX(),
+                        tempOrbit.getOrbitingPointMasses().get(i).getY()
+                );
+                track.addPoint(predictedPosition);
             }
         }
     }
@@ -116,21 +151,25 @@ public class Orbit {
         double accelerationX1 = acceleration1 * dx / distance;
         double accelerationY1 = acceleration1 * dy / distance;
 
-        pointMass1.setVelocityX(pointMass1.getVelocityX() + accelerationX1 * deltaTime);
-        pointMass1.setVelocityY(pointMass1.getVelocityY() + accelerationY1 * deltaTime);
-
-        pointMass1.setX(pointMass1.getX() + pointMass1.getVelocityX() * deltaTime);
-        pointMass1.setY(pointMass1.getY() + pointMass1.getVelocityY() * deltaTime);
+        double newX1 = pointMass1.getX() + (pointMass1.getVelocityX() + accelerationX1 * deltaTime) * deltaTime;
+        double newY1 = pointMass1.getY() + (pointMass1.getVelocityY() + accelerationY1 * deltaTime) * deltaTime;
 
         double acceleration2 = force / pointMass2.getMass();
-        double accelerationX2 = -acceleration1 * dx / distance;
-        double accelerationY2 = -acceleration1 * dy / distance;
+        double accelerationX2 = acceleration2 * (-dx) / distance;
+        double accelerationY2 = acceleration2 * (-dy) / distance;
+
+        double newX2 = pointMass2.getX() + (pointMass2.getVelocityX() + accelerationX2 * deltaTime) * deltaTime;
+        double newY2 = pointMass2.getY() + (pointMass2.getVelocityY() + accelerationY2 * deltaTime) * deltaTime;
+
+        pointMass1.setVelocityX(pointMass1.getVelocityX() + accelerationX1 * deltaTime);
+        pointMass1.setVelocityY(pointMass1.getVelocityY() + accelerationY1 * deltaTime);
+        pointMass1.setX(newX1);
+        pointMass1.setY(newY1);
 
         pointMass2.setVelocityX(pointMass2.getVelocityX() + accelerationX2 * deltaTime);
         pointMass2.setVelocityY(pointMass2.getVelocityY() + accelerationY2 * deltaTime);
-
-        pointMass2.setX(pointMass2.getX() + pointMass2.getVelocityX() * deltaTime);
-        pointMass2.setY(pointMass2.getY() + pointMass2.getVelocityY() * deltaTime);
+        pointMass2.setX(newX2);
+        pointMass2.setY(newY2);
     }
 
     private void updatePositionForPrediction(PointMass pointMass, List<PointMass> allPointMasses, double deltaTime) {
@@ -157,19 +196,18 @@ public class Orbit {
         pointMass.setY(pointMass.getY() + pointMass.getVelocityY() * deltaTime);
     }
 
-    public List<Point2D.Double> predictOrbit(PointMass orbitingPointMass, double deltaTime, int steps) {
+    public List<Point2D.Double> predictOrbit(RenderablePointMass orbitingPointMass, double timeDelta, int steps) {
         List<Point2D.Double> predictedPositions = new ArrayList<>();
-        PointMass tempPointMass = new PointMass(orbitingPointMass.getX(), orbitingPointMass.getY(), orbitingPointMass.getMass(), orbitingPointMass.getVelocityX(), orbitingPointMass.getVelocityY());
-        List<PointMass> allPointMasses = new ArrayList<>(orbitingPointMasses);
-        allPointMasses.add(centralPointMass);
+        PointMass predictedPointMass = new PointMass(orbitingPointMass.getX(), orbitingPointMass.getY(), orbitingPointMass.getMass(), orbitingPointMass.getVelocityX(), orbitingPointMass.getVelocityY());
 
         for (int i = 0; i < steps; i++) {
-            updatePositionForPrediction(tempPointMass, allPointMasses, deltaTime);
-            predictedPositions.add(new Point2D.Double(tempPointMass.getX(), tempPointMass.getY()));
+            updateInteraction(centralPointMass, predictedPointMass, timeDelta);
+            predictedPositions.add(new Point2D.Double(predictedPointMass.getX(), predictedPointMass.getY()));
         }
 
         return predictedPositions;
     }
+
 
     public List<Point2D.Double> oldpredictOrbit(PointMass orbitingPointMass, double deltaTime, int steps) {
         List<Point2D.Double> predictedPositions = new ArrayList<>();
@@ -221,5 +259,6 @@ public class Orbit {
         pointMass.setX(pointMass.getX() + pointMass.getVelocityX() * deltaTime);
         pointMass.setY(pointMass.getY() + pointMass.getVelocityY() * deltaTime);
     }
+
 
 }

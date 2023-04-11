@@ -30,6 +30,15 @@ public class PointMass {
         this.velocityY = velocityY;
     }
 
+    public PointMass(PointMass other) {
+        this.x = other.x;
+        this.y = other.y;
+        this.velocityX = other.velocityX;
+        this.velocityY = other.velocityY;
+        this.mass = other.mass;
+    }
+
+
     /**
      * Returns the x-coordinate of the position.
      *
