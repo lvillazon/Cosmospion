@@ -1,70 +1,77 @@
 import java.awt.*;
+import java.awt.geom.Point2D;
 import java.util.LinkedList;
 
-public class RenderablePointMass extends PointMass implements Renderable {
-    private final int pointSize;
-    private final LinkedList<Point> previousPositions;
-    private final int maxTrailLength;
-    private Color color;
+public class RenderablePointMass extends PointMass {
+    private final int radius;
+    private final Color color;
+    private final LinkedList<TrailPoint> trail;
+    private int trailLength = 4000;
 
-    public RenderablePointMass(double x, double y, double mass, double velocityX, double velocityY, int pointSize, Color c) {
+    public RenderablePointMass(double x, double y, double mass, double velocityX, double velocityY, int radius, Color color) {
         super(x, y, mass, velocityX, velocityY);
-        this.pointSize = pointSize;
-        this.previousPositions = new LinkedList<>();
-        this.maxTrailLength = 500; // Adjust this value to change the trail length
-        this.color = c;
+        this.radius = radius;
+        this.color = color;
+        this.trail = new LinkedList<>();
     }
 
-    public RenderablePointMass(RenderablePointMass other) {
-        super(other.getX(), other.getY(), other.getMass(), other.getVelocityX(), other.getVelocityY());
-        this.pointSize = other.pointSize;
-        this.previousPositions = new LinkedList<>();
-        this.maxTrailLength = 500; // Adjust this value to change the trail length
-        this.color = other.color;
+    public int getTrailLength() {
+        return trailLength;
+    }
+
+    public void setTrailLength(int length) {
+        trailLength = length;
+    }
+
+    public int getRenderRadius() {
+        return radius;
+    }
+
+    public LinkedList<TrailPoint> getTrail(){
+        return trail;
+    };
+
+    public TrailPoint getOldestTrailPoint() {
+        if (trail.isEmpty()) {
+            return null;
+        }
+        return trail.get(0);
     }
 
 
-    @Override
-    public int getScreenX() {
-        // Convert the x-coordinate of the position to screen coordinates.
-        // Replace this with your own conversion logic.
-        return (int) getX();
+    public void draw(Graphics g) {
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setColor(color);
+        g2d.fillOval((int) (getX() - radius / 2.0), (int) (getY() - radius / 2.0), radius, radius);
     }
 
-    @Override
-    public int getScreenY() {
-        // Convert the y-coordinate of the position to screen coordinates.
-        // Replace this with your own conversion logic.
-        return (int) getY();
+    public void drawAtPosition(Graphics g, double x, double y) {
+        Graphics2D g2d = (Graphics2D) g;
+        g2d.setColor(color);
+        g2d.fillOval((int) (x - radius), (int) (y - radius), (int) (radius * 2), (int) (radius * 2));
     }
 
-    @Override
-    public void draw(Graphics graphics) {
+    public void drawTrail(Graphics graphics, Color trailColor) {
         Graphics2D g2d = (Graphics2D) graphics;
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2d.setColor(trailColor);
+        g2d.setStroke(new BasicStroke(1.0f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
 
-        // Draw the trail
-        g2d.setColor(Color.GRAY);
-        Point previousPoint = new Point((int) getX(), (int) getY());
-        for (Point point : previousPositions) {
-            g2d.drawLine(previousPoint.x, previousPoint.y, point.x, point.y);
-            previousPoint = point;
-        }
+        TrailPoint prevTrailPoint = null;
 
-        // draw the point mass
-        graphics.setColor(color);
-        int screenX = getScreenX();
-        int screenY = getScreenY();
-        int adjustedPointSize = Math.max(pointSize, 3); // Ensure a minimum size of 3
-        graphics.fillOval(
-                screenX - adjustedPointSize / 2,
-                screenY - adjustedPointSize / 2,
-                adjustedPointSize, adjustedPointSize);
-
-        // Add the current position to the trail and remove the oldest one if necessary
-        previousPositions.addFirst(new Point((int) getX(), (int) getY()));
-        if (previousPositions.size() > maxTrailLength) {
-            previousPositions.removeLast();
+        for (TrailPoint trailPoint : trail) {
+            if (prevTrailPoint != null) {
+                g2d.drawLine((int) prevTrailPoint.getX(), (int) prevTrailPoint.getY(), (int) trailPoint.getX(), (int) trailPoint.getY());
+            }
+            prevTrailPoint = trailPoint;
         }
     }
+
+
+    public void addPositionToTrail() {
+        if (trail.size() >= trailLength) {
+            trail.removeFirst();
+        }
+        trail.addLast(new TrailPoint(getX(), getY(), getVelocityX(), getVelocityY()));
+    }
+
 }

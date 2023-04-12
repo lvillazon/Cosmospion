@@ -100,5 +100,17 @@ public class PointMass {
         this.velocityY = velocityY;
     }
 
+    public double getDistance(PointMass other) {
+        double dx = this.x - other.x;
+        double dy = this.y - other.y;
+        return Math.hypot(dx, dy);
+    }
+
+    public double getDistance(double x, double y) {
+        double dx = this.x - x;
+        double dy = this.y - y;
+        return Math.hypot(dx, dy);
+    }
+
     // You may want to override equals(), hashCode(), and toString() as well.
 }
