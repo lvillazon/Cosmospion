@@ -3,7 +3,7 @@ package Legacy;
 import org.apache.commons.math3.geometry.euclidean.twod.Vector2D;
 
 public class PhysicsEngine {
-    private static final double GRAVITATIONAL_CONSTANT = 9.81;
+    private static final double GRAVITATIONAL_CONSTANT = 0;//9.81;
 
     public static void updateForces(PhysicalObject physicalObject, double  xCenter, double yCenter) {
         update(physicalObject, xCenter, yCenter);
